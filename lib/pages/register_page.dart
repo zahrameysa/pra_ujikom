@@ -18,7 +18,23 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isLoading = false;
   final dbHelper = DatabaseHelper();
 
+  String? _nameError;
+  String? _emailError;
+  String? _passwordError;
+
   Future<void> _register() async {
+    setState(() {
+      _nameError =
+          _nameController.text.trim().isEmpty ? "Full name is required" : null;
+      _emailError =
+          _emailController.text.trim().isEmpty ? "Email is required" : null;
+      _passwordError =
+          _passwordController.text.isEmpty ? "Password is required" : null;
+    });
+
+    if (_nameError != null || _emailError != null || _passwordError != null)
+      return;
+
     setState(() => _isLoading = true);
 
     final name = _nameController.text.trim();
@@ -32,7 +48,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Registrasi berhasil! Silakan login.')),
       );
-      Navigator.pop(context);
+      Navigator.pushReplacementNamed(context, '/login');
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -99,6 +115,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     TextField(
                       controller: _nameController,
                       decoration: InputDecoration(
+                        errorText: _nameError,
                         filled: true,
                         fillColor: Colors.grey.shade200,
                         border: OutlineInputBorder(
@@ -113,6 +130,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     TextField(
                       controller: _emailController,
                       decoration: InputDecoration(
+                        errorText: _emailError,
                         filled: true,
                         fillColor: Colors.grey.shade200,
                         border: OutlineInputBorder(
@@ -128,9 +146,16 @@ class _RegisterPageState extends State<RegisterPage> {
                       controller: _passwordController,
                       obscureText: hide,
                       decoration: InputDecoration(
-                        suffix: InkWell(
-                          onTap: () => setState(() => hide = !hide),
-                          child: const Icon(Icons.visibility_off),
+                        errorText: _passwordError,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            hide ? Icons.visibility_off : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              hide = !hide;
+                            });
+                          },
                         ),
                         filled: true,
                         fillColor: Colors.grey.shade200,
@@ -185,7 +210,10 @@ class _RegisterPageState extends State<RegisterPage> {
                               recognizer:
                                   TapGestureRecognizer()
                                     ..onTap = () {
-                                      Navigator.pop(context);
+                                      Navigator.pushReplacementNamed(
+                                        context,
+                                        '/login',
+                                      );
                                     },
                             ),
                           ],

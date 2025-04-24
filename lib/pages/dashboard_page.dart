@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:geolocator/geolocator.dart';
+import 'history_page.dart';
+import 'profile_page.dart';
 
 class DashboardPage extends StatefulWidget {
   final String userName;
@@ -16,6 +18,7 @@ class _DashboardPageState extends State<DashboardPage> {
   String formattedTime = '';
   String formattedDate = '';
   Position? currentPosition;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -49,17 +52,33 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _onCheckIn() {
-    print("Check-In at ${DateTime.now()} - $currentPosition");
+    print("Check-In at \${DateTime.now()} - \$currentPosition");
   }
 
   void _onCheckOut() {
-    print("Check-Out at ${DateTime.now()} - $currentPosition");
+    print("Check-Out at \${DateTime.now()} - \$currentPosition");
   }
 
   void _navigateToRequest(String type) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('Open $type request form')));
+    ).showSnackBar(SnackBar(content: Text('Open \$type request form')));
+  }
+
+  void _onBottomNavTapped(int index) {
+    if (index == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const HistoryPage()),
+      ).then((_) => setState(() => _selectedIndex = 0));
+    } else if (index == 2) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfilePage()),
+      ).then((_) => setState(() => _selectedIndex = 0));
+    } else {
+      setState(() => _selectedIndex = index);
+    }
   }
 
   @override
@@ -248,7 +267,8 @@ class _DashboardPageState extends State<DashboardPage> {
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
+        currentIndex: _selectedIndex,
+        onTap: _onBottomNavTapped,
         selectedItemColor: const Color(0xFF0D3B66),
         unselectedItemColor: Colors.black45,
         showUnselectedLabels: true,

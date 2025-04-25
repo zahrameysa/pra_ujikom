@@ -43,6 +43,7 @@ class _LoginPageState extends State<LoginPage> {
     if (user != null) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('user_id', user.id!);
+      await prefs.setString('user_name', user.name); // ✅ Tambahan penting
 
       ScaffoldMessenger.of(
         context,
@@ -146,6 +147,7 @@ class _LoginPageState extends State<LoginPage> {
                           onPressed: () {
                             setState(() {
                               _hidePassword = !_hidePassword;
+                              print(_hidePassword);
                             });
                           },
                         ),

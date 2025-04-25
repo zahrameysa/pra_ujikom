@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pra_ujikom/db/database_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -44,6 +45,10 @@ class _ProfilePageState extends State<ProfilePage> {
         password: _user!.password,
       );
       await dbHelper.updateUser(updatedUser);
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        prefs.setString("user_name", newName);
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully!')),
       );

@@ -1,10 +1,13 @@
-// New home screen with improved design and request options
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'history_page.dart';
 import 'profile_page.dart';
+import 'check_in_page.dart';
+import 'check_out_page.dart';
 
 class DashboardPage extends StatefulWidget {
   final String userName;
@@ -19,12 +22,25 @@ class _DashboardPageState extends State<DashboardPage> {
   String formattedDate = '';
   Position? currentPosition;
   int _selectedIndex = 0;
+  String _userName = '';
 
   @override
   void initState() {
     super.initState();
+    _userName = widget.userName;
+    _loadUserName();
     initializeDateFormatting('id_ID', null).then((_) => _getCurrentTime());
     _getCurrentLocation();
+  }
+
+  Future<void> _loadUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_name');
+    if (name != null && name.isNotEmpty) {
+      setState(() {
+        _userName = name;
+      });
+    }
   }
 
   void _getCurrentTime() {
@@ -52,17 +68,25 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _onCheckIn() {
-    print("Check-In at \${DateTime.now()} - \$currentPosition");
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CheckInPage(),
+      ), // ✅ Navigate
+    );
   }
 
   void _onCheckOut() {
-    print("Check-Out at \${DateTime.now()} - \$currentPosition");
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CheckOutPage()),
+    );
   }
 
   void _navigateToRequest(String type) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('Open \$type request form')));
+    ).showSnackBar(SnackBar(content: Text('Open $type request form')));
   }
 
   void _onBottomNavTapped(int index) {
@@ -75,7 +99,10 @@ class _DashboardPageState extends State<DashboardPage> {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const ProfilePage()),
-      ).then((_) => setState(() => _selectedIndex = 0));
+      ).then((_) {
+        _loadUserName();
+        setState(() => _selectedIndex = 0);
+      });
     } else {
       setState(() => _selectedIndex = index);
     }
@@ -114,7 +141,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              widget.userName,
+                              _userName,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,

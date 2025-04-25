@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:pra_ujikom/services/shared_pref_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../db/database_helper.dart';
 import '../models/user_model.dart';
@@ -41,9 +42,12 @@ class _LoginPageState extends State<LoginPage> {
     UserModel? user = await dbHelper.getUserByEmailAndPassword(email, password);
 
     if (user != null) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('user_id', user.id!);
-      await prefs.setString('user_name', user.name); // ✅ Tambahan penting
+      final prefs = await SharedPrefService.getInstance();
+      await prefs.saveUser(
+        id: user.id!,
+        name: user.name,
+        email: user.email,
+      ); // ✅ Tambahan penting
 
       ScaffoldMessenger.of(
         context,

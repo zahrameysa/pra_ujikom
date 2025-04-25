@@ -2,14 +2,9 @@ class UserModel {
   int? id;
   String name;
   String email;
-  String password;
+  String? password;
 
-  UserModel({
-    this.id,
-    required this.name,
-    required this.email,
-    required this.password,
-  });
+  UserModel({this.id, required this.name, required this.email, this.password});
 
   // Konversi dari Map (SQLite) ke objek
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -29,6 +24,7 @@ class UserModel {
       'password': password,
     };
     if (id != null) map['id'] = id;
+    print(id);
     return map;
   }
 }

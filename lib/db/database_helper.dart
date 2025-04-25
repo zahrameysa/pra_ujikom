@@ -22,7 +22,7 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'absensi_ppkd.db');
-
+    await deleteDatabase(path);
     return await openDatabase(path, version: 1, onCreate: _onCreate);
   }
 
@@ -54,16 +54,16 @@ class DatabaseHelper {
         check_in TEXT,
         check_in_location TEXT,
         check_in_address TEXT,
+        check_in_lat REAL,
+        check_in_lng REAL,
         check_out TEXT,
         check_out_location TEXT,
         check_out_address TEXT,
+        check_out_lat REAL,
+        check_out_lng REAL,
         status TEXT,
         created_at TEXT,
-        updated_at TEXT,
-        check_in_lat REAL,
-        check_in_lng REAL,
-        check_out_lat REAL,
-        check_out_lng REAL
+        updated_at TEXT
       )
     ''');
   }
@@ -147,7 +147,7 @@ class DatabaseHelper {
   }
 
   // Get All CheckModel by User
-  Future<List<CheckModel>> getChecksByUserId(int userId) async {
+  Future<List<CheckModel>> getChecksByUserId(String userId) async {
     final db = await database;
     final result = await db.query(
       'check_model',
@@ -158,21 +158,38 @@ class DatabaseHelper {
     return result.map((e) => CheckModel.fromMap(e)).toList();
   }
 
+  Future<int> insertCheckIn(CheckModel checkModel) async {
+    final db = await database;
+    return await db.insert(
+      'check_model',
+      checkModel.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
   // Update Check-Out Time
-  Future<int> updateCheckOut(int id, String checkOut, String checkOutAddress, String checkOutLocation, double lat, double lng) async {
+  Future<int> updateCheckOut(int checkInId, String checkOutTime) async {
     final db = await database;
     return await db.update(
       'check_model',
-      {
-        'check_out': checkOut,
-        'check_out_address': checkOutAddress,
-        'check_out_location': checkOutLocation,
-        'check_out_lat': lat,
-        'check_out_lng': lng,
-        'updated_at': DateTime.now().toIso8601String(),
-      },
+      {'check_out': checkOutTime},
       where: 'id = ?',
-      whereArgs: [id],
+      whereArgs: [checkInId],
     );
+  }
+
+  Future<CheckModel?> getTodayCheckIn(int userId, String todayDate) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'check_model',
+      where: 'user_id = ? AND date(check_in) = ?',
+      whereArgs: [userId, todayDate],
+    );
+
+    if (maps.isNotEmpty) {
+      return CheckModel.fromMap(maps.first);
+    } else {
+      return null;
+    }
   }
 }

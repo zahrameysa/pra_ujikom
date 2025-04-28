@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../db/database_helper.dart';
-import '../models/history_model.dart';
+import 'package:intl/intl.dart';
+import 'package:pra_ujikom/db/database_helper.dart';
+import 'package:pra_ujikom/models/check_model.dart';
+import 'package:pra_ujikom/services/shared_pref_service.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -10,82 +12,100 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  final dbHelper = DatabaseHelper();
-  List<HistoryModel> historyList = [];
+  late DatabaseHelper _dbHelper;
+  List<CheckModel> _historyList = [];
+  int? _userId;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadHistory();
+    _dbHelper = DatabaseHelper();
+    _loadUserAndHistory();
   }
 
-  Future<void> _loadHistory() async {
-    final user = await dbHelper.getLoggedInUser();
-    if (user != null) {
-      final data = await dbHelper.getHistoryByUserId(user.id!);
+  Future<void> _loadUserAndHistory() async {
+    final prefs = await SharedPrefService.getInstance();
+    final userId = prefs.getUserId();
+
+    if (userId != null) {
+      final history = await _dbHelper.getChecksByUserId(userId.toString());
       setState(() {
-        historyList = data;
+        _userId = userId;
+        _historyList = history;
+        _isLoading = false;
       });
     }
   }
 
+  Future<void> _deleteHistory(int id) async {
+    await _dbHelper.deleteCheckById(id);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Data berhasil dihapus.'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    _loadUserAndHistory(); // refresh list
+  }
+
+  String _formatDate(String? dateTime) {
+    if (dateTime == null || dateTime.isEmpty) return '-';
+    final date = DateTime.parse(dateTime);
+    return DateFormat('dd MMM yyyy').format(date);
+  }
+
+  String _formatTime(String? dateTime) {
+    if (dateTime == null || dateTime.isEmpty) return '-';
+    final time = DateTime.parse(dateTime);
+    return DateFormat('HH:mm').format(time);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        Navigator.pop(context);
-        return false;
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF6F7FB),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF0D3B66),
-          title: const Text('History', style: TextStyle(color: Colors.white)),
-          iconTheme: const IconThemeData(color: Colors.white),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'History',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        body:
-            historyList.isEmpty
-                ? const Center(child: Text('Belum ada data riwayat'))
-                : ListView.builder(
-                  padding: const EdgeInsets.all(20),
-                  itemCount: historyList.length,
-                  itemBuilder: (context, index) {
-                    final history = historyList[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+        backgroundColor: const Color(0xFF0D3B66),
+        foregroundColor: Colors.white,
+      ),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _historyList.isEmpty
+              ? const Center(child: Text('Belum ada data absensi.'))
+              : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _historyList.length,
+                itemBuilder: (context, index) {
+                  final check = _historyList[index];
+                  return Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      title: Text(
+                        _formatDate(check.checkIn),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
-                      child: Column(
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                          _showDeleteConfirmation(check.id!);
+                        },
+                      ),
+                      subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                history.date,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0D3B66),
-                                ),
-                              ),
-                              const Icon(
-                                Icons.access_time,
-                                size: 20,
-                                color: Colors.grey,
-                              ),
-                            ],
-                          ),
                           const SizedBox(height: 8),
                           Row(
                             children: [
@@ -94,11 +114,10 @@ class _HistoryPageState extends State<HistoryPage> {
                                 size: 18,
                                 color: Colors.green,
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Text(
-                                history.checkIn != null
-                                    ? 'Check-In: ${history.checkIn}'
-                                    : 'Belum Check-In',
+                                "In: ${_formatTime(check.checkIn)}",
+                                style: const TextStyle(fontSize: 14),
                               ),
                             ],
                           ),
@@ -108,39 +127,63 @@ class _HistoryPageState extends State<HistoryPage> {
                               const Icon(
                                 Icons.logout,
                                 size: 18,
-                                color: Colors.redAccent,
+                                color: Colors.red,
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Text(
-                                history.checkOut != null
-                                    ? 'Check-Out: ${history.checkOut}'
-                                    : 'Belum Check-Out',
+                                "Out: ${_formatTime(check.checkOut)}",
+                                style: const TextStyle(fontSize: 14),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Icon(
-                                Icons.location_on_outlined,
-                                size: 20,
-                                color: Colors.blueAccent,
+                                Icons.location_on,
+                                size: 18,
+                                color: Colors.blue,
                               ),
                               const SizedBox(width: 6),
-                              Flexible(
+                              Expanded(
                                 child: Text(
-                                  history.location,
-                                  style: const TextStyle(color: Colors.black87),
+                                  check.checkInAddress ?? '-',
+                                  style: const TextStyle(fontSize: 14),
                                 ),
                               ),
                             ],
                           ),
                         ],
                       ),
-                    );
-                  },
-                ),
-      ),
+                    ),
+                  );
+                },
+              ),
+    );
+  }
+
+  void _showDeleteConfirmation(int id) {
+    showDialog(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Konfirmasi'),
+            content: const Text('Apakah Anda yakin ingin menghapus data ini?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _deleteHistory(id);
+                },
+                child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
     );
   }
 }

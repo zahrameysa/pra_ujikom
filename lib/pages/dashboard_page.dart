@@ -227,10 +227,51 @@ class _DashboardPageState extends State<DashboardPage> {
         return;
       }
 
+      // Ambil lokasi saat check-out
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Izin lokasi ditolak secara permanen')),
+        );
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      double lat = position.latitude;
+      double lng = position.longitude;
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+
+      String address =
+          "${placemarks.first.street}, ${placemarks.first.locality}";
+      String location =
+          placemarks.first.subAdministrativeArea ?? "Tidak diketahui";
+
       final now = DateTime.now();
       final formattedNow = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
 
-      await dbHelper.updateCheckOut(checkInRecord.id!, formattedNow);
+      // Update data check-out lengkap (waktu, lokasi, lat, lng)
+      final db = await dbHelper.database;
+      await db.update(
+        'check_model',
+        {
+          'check_out': formattedNow,
+          'check_out_location': location,
+          'check_out_address': address,
+          'check_out_lat': lat,
+          'check_out_lng': lng,
+          'updated_at': formattedNow,
+        },
+        where: 'id = ?',
+        whereArgs: [checkInRecord.id],
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -383,7 +424,11 @@ class _DashboardPageState extends State<DashboardPage> {
                             const SizedBox(width: 16),
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: () {},
+                                onPressed: () async {
+                                  currentUser = await _loadUserData();
+                                  handleCheckOut(context, currentUser.id!);
+                                },
+
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF0D3B66),
                                   padding: const EdgeInsets.symmetric(

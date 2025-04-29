@@ -314,7 +314,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         const CircleAvatar(
                           radius: 30,
                           backgroundImage: AssetImage(
-                            'assets/images/profile.jpg',
+                            'assets/images/profile.png',
                           ),
                         ),
                         const SizedBox(width: 12),

@@ -24,6 +24,20 @@ class _LoginPageState extends State<LoginPage> {
   String? _emailError;
   String? _passwordError;
 
+  // @override
+  // void initState() {
+  //   // TODO: implement initState
+  //   super.initState();
+  // }
+
+  // void initUser() async {
+  //   final prefs = await SharedPrefService.getInstance();
+  //   var id = prefs.getUserId();
+  //   if (id == 'idUser') {
+  //     Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardPage(userName: userName),));
+  //   }
+  // }
+
   Future<void> _login() async {
     setState(() {
       _emailError =

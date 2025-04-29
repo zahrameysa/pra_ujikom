@@ -21,22 +21,39 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _loadUser();
-    _nameController.addListener(() => setState(() {}));
+    _nameController.addListener(
+      () => setState(() {}),
+    ); // update tombol Save aktif
   }
 
+  // 🔥 Fungsi untuk mengambil data user yang sedang login
   Future<void> _loadUser() async {
-    final user = await dbHelper.getLoggedInUser();
-    setState(() {
-      _user = user;
-      _nameController.text = user?.name ?? '';
-      _emailController.text = user?.email ?? '';
-      _isLoading = false;
-    });
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('idUser'); // id disimpan saat login
+
+    if (userId != null) {
+      final user = await dbHelper.getUserById(userId);
+      if (user != null) {
+        setState(() {
+          _user = user;
+          _nameController.text = user.name; // isi otomatis name
+          _emailController.text = user.email; // isi otomatis email
+          _isLoading = false;
+        });
+      }
+    } else {
+      // Kalau tidak ada id user di SharedPrefs
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
+  // 🔥 Fungsi untuk update nama di SQLite + SharedPreferences
   Future<void> _updateProfile() async {
     if (_user == null) return;
     final newName = _nameController.text.trim();
+
     if (newName.isNotEmpty) {
       final updatedUser = UserModel(
         id: _user!.id,
@@ -44,15 +61,21 @@ class _ProfilePageState extends State<ProfilePage> {
         email: _user!.email,
         password: _user!.password,
       );
+
       await dbHelper.updateUser(updatedUser);
+
       final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('name', newName); // Update SharedPrefs
+
       setState(() {
-        prefs.setString("user_name", newName);
+        _user = updatedUser;
       });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully!')),
       );
-      Navigator.pop(context);
+
+      Navigator.pop(context); // kembali ke dashboard
     }
   }
 
@@ -78,6 +101,7 @@ class _ProfilePageState extends State<ProfilePage> {
               : SingleChildScrollView(
                 child: Column(
                   children: [
+                    // 🔥 Bagian atas - foto profile
                     Container(
                       height: 200,
                       decoration: const BoxDecoration(
@@ -88,40 +112,21 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                       child: Center(
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            CircleAvatar(
-                              radius: 55,
-                              backgroundColor: Colors.white,
-                              child: CircleAvatar(
-                                radius: 50,
-                                backgroundImage: const AssetImage(
-                                  'assets/images/profile.jpg',
-                                ),
-                              ),
+                        child: CircleAvatar(
+                          radius: 55,
+                          backgroundColor: Colors.white,
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundImage: const AssetImage(
+                              'assets/images/profile.png',
                             ),
-                            Positioned(
-                              bottom: 0,
-                              right: 140,
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF0D3B66),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.camera_alt,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 30),
+
+                    // 🔥 Bagian form edit
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Column(
@@ -166,7 +171,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           const SizedBox(height: 8),
                           TextField(
                             controller: _emailController,
-                            readOnly: true,
+                            readOnly: true, // 🔥 Email tidak boleh diedit
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: Colors.white,
@@ -185,6 +190,8 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                           const SizedBox(height: 30),
+
+                          // 🔥 Tombol Save
                           SizedBox(
                             width: double.infinity,
                             height: 50,
@@ -215,6 +222,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // 🔥 Validasi apakah nama sudah diisi
   bool get _isNameFilled => _nameController.text.trim().isNotEmpty;
 
   @override
